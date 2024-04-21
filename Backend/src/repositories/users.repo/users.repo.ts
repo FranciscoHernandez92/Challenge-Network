@@ -78,16 +78,22 @@ export class UserSqlRepository {
     return newUser;
   }
 
-  async update(inputId: string, data: Partial<UserCreateDto>) {
-    let user: User;
+  async update(id: string, data: Partial<UserCreateDto>) {
+    let user = (await this.prisma.user.findUnique({
+      where: { id },
+    })) as User;
+    if (!user) {
+      throw new HttpError(404, 'Not Found', `User ${id} not found`);
+    }
+
     try {
       user = (await this.prisma.user.update({
-        where: { id: inputId },
+        where: { id },
         data,
         select,
       })) as User;
     } catch (error) {
-      throw new HttpError(404, 'Not Found', `User ${inputId}not found`);
+      throw new HttpError(404, 'Not Found', `User ${id}not found`);
     }
 
     return user;

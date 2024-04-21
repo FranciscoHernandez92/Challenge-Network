@@ -10,15 +10,12 @@ import { CreateUserComponent } from '../create-user/create-user.component';
   standalone: true,
   imports: [ReactiveFormsModule, CreateUserComponent],
   template: ` <form [formGroup]="formLogin" (ngSubmit)="submit()">
-      <label for="username">Username</label>
-      <input id="username" type="text" formControlName="username" />
-      <label for="password">Password</label>
-      <input id="password" type="password" formControlName="password" />
-      <button type="submit" [disabled]="formLogin.invalid">Submit</button>
-    </form>
-    <div>
-      <button type="button">Create User</button>
-    </div>`,
+    <label for="username">Username</label>
+    <input id="username" type="text" formControlName="username" />
+    <label for="password">Password</label>
+    <input id="password" type="password" formControlName="password" />
+    <button type="submit" [disabled]="formLogin.invalid">Submit</button>
+  </form>`,
   styles: ``,
 })
 export class LoginComponent {

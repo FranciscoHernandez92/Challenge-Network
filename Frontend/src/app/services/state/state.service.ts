@@ -17,6 +17,8 @@ const initialState: State = {
 export class StateService {
   private state$ = new BehaviorSubject<State>(initialState);
   private repoUsers = inject(RepoService);
+  private displayForm = new BehaviorSubject<boolean>(false);
+  public displayForm$ = this.displayForm.asObservable();
 
   getState(): Observable<State> {
     return this.state$.asObservable();
@@ -50,5 +52,9 @@ export class StateService {
       token: null,
       currenPayload: null,
     });
+  }
+
+  showForm(show: boolean) {
+    this.displayForm.next(show);
   }
 }

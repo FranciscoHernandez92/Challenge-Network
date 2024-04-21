@@ -1,24 +1,12 @@
-import { type ObjectSchema } from 'joi';
-import { type UserCreateDto } from '../../entities/users.entities';
+import { HttpError } from '../../middlewares/errors.middlewares';
 import { type UserSqlRepository } from '../../repositories/users.repo/users.repo';
 import { UserController } from './users.controllers';
-import { Auth } from '../../services/auth.services';
 import { type Request, type Response } from 'express';
 
-jest.mock('../entities/user.schema.js', () => ({
-  userCreateDtoSchema: {
-    validate: jest.fn().mockReturnValue({ error: null, value: {} }),
-  } as unknown as ObjectSchema<UserCreateDto>,
-  userUpdateDtoSchema: {
-    validate: jest.fn().mockReturnValue({ error: null, value: {} }),
-  } as unknown as ObjectSchema<UserCreateDto>,
-}));
-
-describe('Given a instance of the class UsersController', () => {
+describe('Given a instance of the class UserController', () => {
   const repo = {
     readAll: jest.fn(),
     readById: jest.fn(),
-    searchForLogin: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
@@ -31,47 +19,140 @@ describe('Given a instance of the class UsersController', () => {
   } as unknown as Response;
   const next = jest.fn();
 
-  Auth.hash = jest.fn().mockResolvedValue('hashedPassword');
-
   const controller = new UserController(repo);
   test('Then it should be instance of the class', () => {
     expect(controller).toBeInstanceOf(UserController);
   });
 
-  describe('When we use the method login', () => {
-    test('Then it should call repo.searchForLogin', async () => {
-      const user = { id: '1', password: 'password' };
-      req.body = { email: 'test@acme.com', password: 'password' };
-      (repo.searchForLogin as jest.Mock).mockResolvedValue(user);
-      await controller.login(req, res, next);
-      expect(repo.searchForLogin).toHaveBeenCalledWith(
-        'email',
-        'test@acme.com'
-      );
+  describe('When we use the method getAll', () => {
+    test('Then it should call repo.readAll', async () => {
+      (repo.readAll as jest.Mock).mockResolvedValue([]);
+      await controller.getAll(req, res, next);
+      expect(repo.readAll).toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith([]);
+    });
+  });
+
+  describe('When we use the method getAll and repo throw an ERROR', () => {
+    test('Then it should call repo.readAll and next', async () => {
+      const error = new Error('Something went wrong');
+      (repo.readAll as jest.Mock).mockRejectedValue(error);
+      await controller.getAll(req, res, next);
+      expect(repo.readAll).toHaveBeenCalled();
+      expect(next).toHaveBeenCalledWith(error);
+    });
+  });
+
+  describe('When we use the method getById', () => {
+    test('Then it should call repo.readById', async () => {
+      (repo.readById as jest.Mock).mockResolvedValue({});
+      req.params = { id: '1' };
+      await controller.getById(req, res, next);
+      expect(repo.readById).toHaveBeenCalledWith('1');
+      expect(res.json).toHaveBeenCalledWith({});
+    });
+  });
+
+  describe('When we use the method getById and repo throw an ERROR', () => {
+    test('Then it should call repo.readById and next', async () => {
+      const error = new Error('Something went wrong');
+      (repo.readById as jest.Mock).mockRejectedValue(error);
+      req.params = { id: '1' };
+      await controller.getById(req, res, next);
+      expect(repo.readById).toHaveBeenCalledWith('1');
+      expect(next).toHaveBeenCalledWith(error);
     });
   });
 
   describe('When we use the method create', () => {
     test('Then it should call repo.create', async () => {
-      const user = { name: 'test', password: 'test' };
+      const user = {
+        name: 'title',
+        email: 'email@gmail.com',
+        password: 'password',
+        birthDate: '2022-03-26T00:00:00',
+      };
       req.body = user;
       (repo.create as jest.Mock).mockResolvedValue(user);
       await controller.create(req, res, next);
-      expect(repo.create).toHaveBeenCalledWith({});
-      expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(user);
+      expect(repo.create).toHaveBeenCalledWith(user);
+    });
+  });
+
+  describe('When we use the method create with INVALID data', () => {
+    test('Then it should call next with an error', async () => {
+      const user = { name: 'title' };
+      req.body = user;
+      await controller.create(req, res, next);
+      expect(next).toHaveBeenCalledWith(
+        new HttpError(406, 'Not Acceptable', 'Something went wrong')
+      );
+    });
+  });
+
+  describe('When we use the method create and repo throw an ERROR', () => {
+    test('Then it should call repo.create and next', async () => {
+      const error = new Error('Something went wrong');
+      (repo.create as jest.Mock).mockRejectedValue(error);
+      const user = { name: 'title', email: 'email@gmail.com' };
+      req.body = user;
+      await controller.create(req, res, next);
+      expect(next).toHaveBeenCalledWith(error);
     });
   });
 
   describe('When we use the method update', () => {
     test('Then it should call repo.update', async () => {
-      const user = { id: '1' };
+      const user = { name: 'title', email: 'email@gmail.com' };
       req.params = { id: '1' };
-      req.body = { ...user, id: req.params.id };
+      req.body = user;
       (repo.update as jest.Mock).mockResolvedValue(user);
       await controller.update(req, res, next);
       expect(repo.update).toHaveBeenCalledWith('1', user);
       expect(res.json).toHaveBeenCalledWith(user);
+    });
+  });
+
+  describe('When we use the method update with INVALID data', () => {
+    test('Then it should call next with an error', async () => {
+      const book = { name: 34 };
+      req.body = book;
+      await controller.update(req, res, next);
+      expect(next).toHaveBeenCalledWith(
+        new HttpError(406, 'Not Acceptable', 'Something went wrong')
+      );
+    });
+  });
+
+  describe('When we use the method update and repo throw an ERROR', () => {
+    test('Then it should call repo.update and next', async () => {
+      const error = new Error('Something went wrong');
+      (repo.update as jest.Mock).mockRejectedValue(error);
+      const book = { name: 'title', category: 1 };
+      req.body = book;
+      await controller.update(req, res, next);
+      expect(next).toHaveBeenCalledWith(error);
+    });
+  });
+
+  describe('When we use the method delete', () => {
+    test('Then it should call repo.delete', async () => {
+      req.params = { id: '1' };
+      (repo.delete as jest.Mock).mockResolvedValue({});
+      await controller.delete(req, res, next);
+      expect(repo.delete).toHaveBeenCalledWith('1');
+      expect(res.json).toHaveBeenCalledWith({});
+    });
+  });
+
+  describe('When we use the method delete and repo throw an ERROR', () => {
+    test('Then it should call repo.delete and next', async () => {
+      const error = new Error('Something went wrong');
+      (repo.delete as jest.Mock).mockRejectedValue(error);
+      req.params = { id: '1' };
+      await controller.delete(req, res, next);
+      expect(repo.delete).toHaveBeenCalledWith('1');
+      expect(next).toHaveBeenCalledWith(error);
     });
   });
 });
